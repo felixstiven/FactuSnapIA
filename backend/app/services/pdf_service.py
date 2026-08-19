@@ -27,45 +27,44 @@ class PDFService:
         try:
             if np is not None:
                 img_np = np.array(img_rgb)
-                # Convertir a grises
+                
+                # 1. Convertir a escala de grises para análisis
                 gray = np.mean(img_np, axis=2)
                 
-                # El recibo es muy blanco. Umbral estricto para ignorar fondos claros
-                mask = gray > 165
+                # 2. Detectar el papel (es más claro que el fondo oscuro)
+                # Un umbral dinámico o fijo (ej. 140) separa el papel de la silla
+                threshold = np.mean(gray) * 1.1 # Ligeramente arriba del promedio
+                if threshold > 200: threshold = 180
                 
-                # Contar pixeles blancos por fila y columna
-                row_counts = np.sum(mask, axis=1)
-                col_counts = np.sum(mask, axis=0)
+                mask = gray > threshold
                 
-                # Una fila/columna es recibo si tiene >15% de su longitud en blanco
-                h, w = gray.shape
-                row_mask = row_counts > (w * 0.15)
-                col_mask = col_counts > (h * 0.15)
+                # 3. Pintar todo lo que NO sea papel de BLANCO PURO
+                img_np[~mask] = [255, 255, 255]
                 
-                if np.any(row_mask) and np.any(col_mask):
-                    y_min = np.argmax(row_mask)
-                    y_max = len(row_mask) - np.argmax(row_mask[::-1])
-                    
-                    x_min = np.argmax(col_mask)
-                    x_max = len(col_mask) - np.argmax(col_mask[::-1])
-                    
-                    # Añadir margen
-                    x_min = max(0, x_min - 15)
-                    y_min = max(0, y_min - 15)
-                    x_max = min(w, x_max + 15)
-                    y_max = min(h, y_max + 15)
-                    
-                    if (x_max - x_min) > w * 0.2 and (y_max - y_min) > h * 0.2:
-                        img_rgb = img_rgb.crop((x_min, y_min, x_max, y_max))
+                # Convertir de vuelta a imagen PIL
+                img_rgb = Image.fromarray(np.uint8(img_np))
+                
+                # 4. Obtener cuadro delimitador para recortar bordes blancos excesivos
+                bbox = img_rgb.convert("L").point(lambda p: 255 if p < 250 else 0).getbbox()
+                if bbox:
+                    x_min, y_min, x_max, y_max = bbox
+                    w, h = img_rgb.size
+                    x_min = max(0, x_min - 20)
+                    y_min = max(0, y_min - 20)
+                    x_max = min(w, x_max + 20)
+                    y_max = min(h, y_max + 20)
+                    img_rgb = img_rgb.crop((x_min, y_min, x_max, y_max))
+
         except Exception as e:
-            print(f"Aviso al recortar imagen: {e}")
+            print(f"Aviso al procesar fondo: {e}")
 
-        # Realce de contraste y nitidez (Efecto Escáner PDF)
+        # 5. Efecto Escáner: Convertir a grises y forzar el contraste al máximo
+        from PIL import ImageOps
+        img_rgb = ImageOps.grayscale(img_rgb).convert("RGB")
         contrast_enhancer = ImageEnhance.Contrast(img_rgb)
-        img_rgb = contrast_enhancer.enhance(1.4)
-
+        img_rgb = contrast_enhancer.enhance(2.0)
         brightness_enhancer = ImageEnhance.Brightness(img_rgb)
-        img_rgb = brightness_enhancer.enhance(1.1)
+        img_rgb = brightness_enhancer.enhance(1.2)
 
         return img_rgb
 
