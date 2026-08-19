@@ -64,8 +64,13 @@ class AIService:
         """
 
         try:
+            # Optimizar la imagen antes de enviarla (si es muy grande, Gemini tarda mucho o se queda colgado)
+            max_size = (1600, 1600)
+            img_optimized = pil_image.copy()
+            img_optimized.thumbnail(max_size)
+
             print("Enviando imagen a Gemini 1.5 Flash...")
-            response = self.model.generate_content([prompt, pil_image])
+            response = self.model.generate_content([prompt, img_optimized])
             raw_text = response.text.strip()
             print(f"Respuesta raw de Gemini: {raw_text}")
             
