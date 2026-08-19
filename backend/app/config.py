@@ -1,8 +1,8 @@
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-# Cargar variables de entorno desde .env
-load_dotenv()
+# Cargar variables de entorno desde el archivo .env en la raíz del proyecto
+load_dotenv(find_dotenv())
 
 class Settings:
     """

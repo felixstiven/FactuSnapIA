@@ -14,7 +14,11 @@ formato JSON compatible con la estructura requerida.
 """
 
 import json
+import warnings
 from PIL import Image
+
+# Silenciar avisos de deprecación para mantener la consola limpia
+warnings.filterwarnings("ignore", category=FutureWarning)
 import google.generativeai as genai
 from app.config import settings
 from app.models.factura_model import FacturaExtraidaData
@@ -23,7 +27,7 @@ class AIService:
     def __init__(self):
         if settings.GEMINI_API_KEY:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.model = genai.GenerativeModel('gemini-flash-latest')
         else:
             self.model = None
 
@@ -43,39 +47,57 @@ class AIService:
             )
 
         prompt = """
-        Actúa como un experto en OCR y procesamiento de documentos contables.
-        Analiza esta imagen de factura y extrae la información en un objeto JSON estricto con las siguientes claves:
-        - emisor (string): Nombre del comercio o empresa emisor.
-        - nit (string o null): Identificación fiscal NIT/RUT/RFC si está visible.
-        - fecha (string): Fecha de compra en formato YYYY-MM-DD.
-        - monto_total (float): Valor total a pagar.
-        - moneda (string): Moneda de la factura (ej. COP, USD, EUR). Default: COP.
-        - categoria (string): Categoría del gasto (ej. Supermercado, Restaurante, Tecnología, Servicios).
+        Actúa como un sistema experto en OCR y extracción de datos contables de facturas y recibos (en español o inglés).
+        Analiza esta imagen y extrae la información requerida en formato JSON estricto:
 
-        Responde ÚNICAMENTE con el objeto JSON válido. No incluyas bloques de código markdown como ```json.
+        Campos a extraer:
+        - emisor (string): Nombre comercial del restaurante, tienda o empresa emisor (ej. "Patacon Pisao Restaurant", "Almacenes Éxito", etc.).
+        - nit (string o null): Número de identificación fiscal (NIT, RUT, RFC, Tax ID, Phone) si existe. Si no hay NIT explícito, puedes poner el número de teléfono o null.
+        - fecha (string): Fecha de la compra normalizada estrictamente en formato YYYY-MM-DD (ej. "4/22/2025" o "2025-04-22" debe convertirse a "2025-04-22").
+        - monto_total (float): El valor total a pagar final (ej. si dice "TOTAL", "BALANCE DUE", "TOTAL A PAGAR", extrae solo el número flotante ej. 35.28).
+        - moneda (string): Moneda detectada (ej. "USD" si tiene '$' o direcciones de EE.UU., "COP" si es Colombia, "EUR" si es Euros).
+        - categoria (string): Categoría sugerida del gasto (ej. "Restaurante", "Supermercado", "Servicios", "Transporte").
+
+        Regla de oro: Responde ÚNICAMENTE con el objeto JSON válido.
+        Ejemplo: {"emisor": "Patacon Pisao Restaurant", "nit": "305-591-8866", "fecha": "2025-04-22", "monto_total": 35.28, "moneda": "USD", "categoria": "Restaurante"}
         """
 
         try:
+            print("Enviando imagen a Gemini 1.5 Flash...")
             response = self.model.generate_content([prompt, pil_image])
             raw_text = response.text.strip()
+            print(f"Respuesta raw de Gemini: {raw_text}")
             
             # Limpiar etiquetas de markdown si la IA las genera por error
-            if raw_text.startswith("```json"):
-                raw_text = raw_text[7:]
-            if raw_text.startswith("```"):
-                raw_text = raw_text[3:]
-            if raw_text.endswith("```"):
-                raw_text = raw_text[:-3]
+            if "```json" in raw_text:
+                raw_text = raw_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in raw_text:
+                raw_text = raw_text.split("```")[1].split("```")[0].strip()
             
             data_dict = json.loads(raw_text.strip())
+            
+            # Limpiar y asegurar tipos de datos
+            monto_val = data_dict.get("monto_total", 0.0)
+            if isinstance(monto_val, str):
+                # Remover símbolos de moneda y comas
+                monto_clean = monto_val.replace("$", "").replace(",", "").strip()
+                monto_val = float(monto_clean) if monto_clean else 0.0
+
+            data_dict["monto_total"] = float(monto_val)
+
+            print(f"Datos extraidos exitosamente: {data_dict}")
             return FacturaExtraidaData(**data_dict)
         except Exception as e:
-            # Si falla la extracción por IA o formato, se devuelve un fallback seguro
+            print(f"ERROR AL LLAMAR A GEMINI AI: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            error_msg = f"Error IA: {str(e)}"
             return FacturaExtraidaData(
-                emisor="Factura Sin Nombre",
+                emisor=error_msg[:50],  # Limitar tamaño
                 nit=None,
                 fecha="2026-08-18",
                 monto_total=0.0,
-                moneda="COP",
-                categoria="Sin Categoría"
+                moneda="USD",
+                categoria="Error"
             )
