@@ -23,28 +23,28 @@ except ImportError:
 class PDFService:
     @staticmethod
     def recortar_y_limpiar_fondo(pil_img: Image.Image) -> Image.Image:
-        img_rgb = pil_img.convert("RGB")
         try:
+            from PIL import ImageFilter
             if np is not None:
-                img_np = np.array(img_rgb)
+                # 1. Escala de grises
+                gray_img = pil_img.convert("L")
+                gray_np = np.array(gray_img).astype(float)
                 
-                # 1. Convertir a escala de grises para análisis
-                gray = np.mean(img_np, axis=2)
+                # 2. Adaptive thresholding usando GaussianBlur
+                # Esto detecta la iluminación local.
+                # Cualquier fondo (silla, mesa) se vuelve blanco puro (255)
+                # y el texto se vuelve negro oscuro (0).
+                blur_img = gray_img.filter(ImageFilter.GaussianBlur(radius=25))
+                blur_np = np.array(blur_img).astype(float)
                 
-                # 2. Detectar el papel (es más claro que el fondo oscuro)
-                # Un umbral dinámico o fijo (ej. 140) separa el papel de la silla
-                threshold = np.mean(gray) * 1.1 # Ligeramente arriba del promedio
-                if threshold > 200: threshold = 180
+                # Dividir la imagen por su versión borrosa
+                result_np = (gray_np / (blur_np + 1)) * 255
+                result_np = np.clip(result_np, 0, 255).astype(np.uint8)
                 
-                mask = gray > threshold
+                # Convertir a imagen final
+                img_rgb = Image.fromarray(result_np).convert("RGB")
                 
-                # 3. Pintar todo lo que NO sea papel de BLANCO PURO
-                img_np[~mask] = [255, 255, 255]
-                
-                # Convertir de vuelta a imagen PIL
-                img_rgb = Image.fromarray(np.uint8(img_np))
-                
-                # 4. Obtener cuadro delimitador para recortar bordes blancos excesivos
+                # 3. Recortar (ahora el fondo es blanco puro)
                 bbox = img_rgb.convert("L").point(lambda p: 255 if p < 250 else 0).getbbox()
                 if bbox:
                     x_min, y_min, x_max, y_max = bbox
@@ -54,13 +54,14 @@ class PDFService:
                     x_max = min(w, x_max + 20)
                     y_max = min(h, y_max + 20)
                     img_rgb = img_rgb.crop((x_min, y_min, x_max, y_max))
+            else:
+                img_rgb = pil_img.convert("RGB")
 
         except Exception as e:
-            print(f"Aviso al procesar fondo: {e}")
+            print(f"Aviso al procesar fondo adaptativo: {e}")
+            img_rgb = pil_img.convert("RGB")
 
-        # 5. Efecto Escáner: Convertir a grises y forzar el contraste al máximo
-        from PIL import ImageOps
-        img_rgb = ImageOps.grayscale(img_rgb).convert("RGB")
+        # 4. Aumentar contraste final para efecto escáner
         contrast_enhancer = ImageEnhance.Contrast(img_rgb)
         img_rgb = contrast_enhancer.enhance(2.0)
         brightness_enhancer = ImageEnhance.Brightness(img_rgb)
