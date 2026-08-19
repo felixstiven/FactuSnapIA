@@ -54,12 +54,12 @@ class AIService:
         - emisor (string): Nombre comercial del restaurante, tienda o empresa emisor (ej. "Patacon Pisao Restaurant", "Almacenes Éxito", etc.).
         - nit (string o null): Número de identificación fiscal (NIT, RUT, RFC, Tax ID, Phone) si existe. Si no hay NIT explícito, puedes poner el número de teléfono o null.
         - fecha (string): Fecha de la compra normalizada estrictamente en formato YYYY-MM-DD (ej. "4/22/2025" o "2025-04-22" debe convertirse a "2025-04-22").
-        - monto_total (float): El valor total a pagar final (ej. si dice "TOTAL", "BALANCE DUE", "TOTAL A PAGAR", extrae solo el número flotante ej. 35.28).
-        - impuestos (float): El valor total de los impuestos sumados (IVA, Sales Tax, Tax, etc). Extrae solo el numero flotante. Si no especifica impuestos, devuelve 0.0.
+        - monto_total (float): El valor total a pagar final. DEBE SER UN NÚMERO (ej. 35.28). NO incluyas letras ni símbolos de moneda. Si no se encuentra, devuelve 0.0.
+        - impuestos (float): El valor total de los impuestos sumados (IVA, Sales Tax, Tax). DEBE SER UN NÚMERO flotante. Si no especifica impuestos o está vacío, devuelve 0.0. NUNCA devuelvas null o texto.
         - moneda (string): Moneda detectada (ej. "USD" si tiene '$' o direcciones de EE.UU., "COP" si es Colombia, "EUR" si es Euros).
         - categoria (string): Categoría sugerida del gasto (ej. "Restaurante", "Supermercado", "Servicios", "Transporte").
 
-        Regla de oro: Responde ÚNICAMENTE con el objeto JSON válido.
+        Regla de oro: Responde ÚNICAMENTE con el objeto JSON válido. NO uses comillas en los valores flotantes (ej. usa 35.28, no "35.28").
         Ejemplo: {"emisor": "Patacon Pisao Restaurant", "nit": "305-591-8866", "fecha": "2025-04-22", "monto_total": 35.28, "impuestos": 2.24, "moneda": "USD", "categoria": "Restaurante"}
         """
 

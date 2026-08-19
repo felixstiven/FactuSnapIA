@@ -36,8 +36,11 @@ class FacturaService:
 
         # 3. Guardar PDF en Supabase Storage
         # Formatear el nombre como [Emisor]_[Fecha]_[Monto].pdf
-        safe_emisor = "".join(c for c in factura_data.emisor if c.isalnum() or c in " _-").strip().replace(" ", "_")
-        file_name = f"{safe_emisor}_{factura_data.fecha}_{factura_data.monto_total}USD.pdf"
+        import unicodedata
+        # Eliminar tildes y caracteres especiales (ej: "Baterías" -> "Baterias")
+        emisor_sin_tildes = unicodedata.normalize('NFKD', factura_data.emisor).encode('ASCII', 'ignore').decode('utf-8')
+        safe_emisor = "".join(c for c in emisor_sin_tildes if c.isalnum() or c in " _-").strip().replace(" ", "_")
+        file_name = f"{safe_emisor}_{factura_data.fecha}_{factura_data.monto_total}{factura_data.moneda}.pdf"
         pdf_url = self.repository.subir_pdf_storage(pdf_bytes, file_name)
 
         # 4. Guardar registro en Supabase PostgreSQL
