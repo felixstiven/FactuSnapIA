@@ -105,3 +105,18 @@ factusnap-ai/
         └── utils/
             └── canvasFilter.ts
 ```
+
+## 🔄 Historial de Mejoras y Cambios Implementados (Agosto 2026)
+
+Durante el desarrollo y pruebas de la aplicación, se realizaron las siguientes integraciones y ajustes sobre las instrucciones originales:
+
+1. **Recorte Inteligente del PDF (`pdf_service.py`)**:
+   - Se reemplazó el filtro básico por un algoritmo de conteo de píxeles basado en `numpy` (`np.sum` y `np.argmax`), el cual analiza filas y columnas para detectar con precisión el área de la hoja blanca y eliminar completamente el fondo (ej. la silla del carro), dejando el PDF final perfectamente limpio.
+2. **Actualización de IA a `gemini-flash-latest` (`ai_service.py`)**:
+   - El modelo originalmente sugerido (`gemini-1.5-flash`) ya no está disponible, por lo que la aplicación ahora se conecta al endpoint dinámico `gemini-flash-latest` para garantizar la conexión.
+3. **Nomenclatura del Archivo PDF**:
+   - En lugar de usar un UUID aleatorio, los PDFs guardados en Supabase Storage ahora se nombran según la convención de los datos extraídos: `[Emisor]_[Fecha]_[Monto]USD.pdf` (ej. `Patacon_Pisao_Restaurant_2025-04-22_35.28USD.pdf`).
+4. **Extracción de Impuestos (IVA/Taxes)**:
+   - Se actualizó el modelo de base de datos (`factura_model.py`), la tarjeta del frontend (`FacturaCard.tsx`), y las instrucciones de IA para identificar de manera independiente el renglón de impuestos (ej. Sales Tax, IVA) y mostrarlo de forma desagregada del total de la factura.
+5. **Corrección de Errores de Windows**:
+   - Se eliminaron los Emojis de los `print()` en el servidor Uvicorn para prevenir bloqueos por `UnicodeEncodeError` en la consola de Windows PowerShell.

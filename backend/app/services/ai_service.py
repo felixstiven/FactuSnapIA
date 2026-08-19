@@ -36,12 +36,12 @@ class AIService:
         Envía la imagen a Gemini 1.5 Flash y parsea el JSON resultante.
         """
         if not self.model:
-            # Fallback en desarrollo si no hay API Key configurada
             return FacturaExtraidaData(
                 emisor="Almacenes Éxito S.A.",
                 nit="890.900.943-1",
                 fecha="2026-08-18",
                 monto_total=145900.0,
+                impuestos=27721.0,
                 moneda="COP",
                 categoria="Supermercado"
             )
@@ -55,11 +55,12 @@ class AIService:
         - nit (string o null): Número de identificación fiscal (NIT, RUT, RFC, Tax ID, Phone) si existe. Si no hay NIT explícito, puedes poner el número de teléfono o null.
         - fecha (string): Fecha de la compra normalizada estrictamente en formato YYYY-MM-DD (ej. "4/22/2025" o "2025-04-22" debe convertirse a "2025-04-22").
         - monto_total (float): El valor total a pagar final (ej. si dice "TOTAL", "BALANCE DUE", "TOTAL A PAGAR", extrae solo el número flotante ej. 35.28).
+        - impuestos (float): El valor total de los impuestos sumados (IVA, Sales Tax, Tax, etc). Extrae solo el numero flotante. Si no especifica impuestos, devuelve 0.0.
         - moneda (string): Moneda detectada (ej. "USD" si tiene '$' o direcciones de EE.UU., "COP" si es Colombia, "EUR" si es Euros).
         - categoria (string): Categoría sugerida del gasto (ej. "Restaurante", "Supermercado", "Servicios", "Transporte").
 
         Regla de oro: Responde ÚNICAMENTE con el objeto JSON válido.
-        Ejemplo: {"emisor": "Patacon Pisao Restaurant", "nit": "305-591-8866", "fecha": "2025-04-22", "monto_total": 35.28, "moneda": "USD", "categoria": "Restaurante"}
+        Ejemplo: {"emisor": "Patacon Pisao Restaurant", "nit": "305-591-8866", "fecha": "2025-04-22", "monto_total": 35.28, "impuestos": 2.24, "moneda": "USD", "categoria": "Restaurante"}
         """
 
         try:
@@ -98,6 +99,7 @@ class AIService:
                 nit=None,
                 fecha="2026-08-18",
                 monto_total=0.0,
+                impuestos=0.0,
                 moneda="USD",
                 categoria="Error"
             )

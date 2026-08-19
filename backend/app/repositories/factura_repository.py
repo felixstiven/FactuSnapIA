@@ -68,6 +68,7 @@ class FacturaRepository:
             "nit": factura_data.nit,
             "fecha": factura_data.fecha,
             "monto_total": factura_data.monto_total,
+            "impuestos": factura_data.impuestos,
             "moneda": factura_data.moneda,
             "categoria": factura_data.categoria,
             "pdf_url": pdf_url

@@ -18,6 +18,9 @@ export const FacturaCard: React.FC<FacturaCardProps> = ({ factura }) => {
         <p className="monto">
           <strong>Total:</strong> {factura.monto_total.toLocaleString('es-CO')} {factura.moneda}
         </p>
+        <p className="impuestos">
+          <strong>Impuestos:</strong> {factura.impuestos ? factura.impuestos.toLocaleString('es-CO') : '0'} {factura.moneda}
+        </p>
       </div>
       <div className="card-footer">
         <a 

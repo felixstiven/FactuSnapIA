@@ -15,6 +15,7 @@ class FacturaExtraidaData(BaseModel):
     nit: Optional[str] = Field(None, description="Número de Identificación Tributaria o RFC/RUT")
     fecha: str = Field(..., description="Fecha de la factura en formato YYYY-MM-DD")
     monto_total: float = Field(..., description="Monto total cobrado en la factura")
+    impuestos: float = Field(0.0, description="Monto total de impuestos (IVA, Sales Tax)")
     moneda: str = Field("COP", description="Código de la moneda (ej. COP, USD, EUR)")
     categoria: Optional[str] = Field("General", description="Categoría asignada al gasto (ej. Alimentación, Transporte)")
 
@@ -27,6 +28,7 @@ class FacturaResponse(BaseModel):
     nit: Optional[str]
     fecha: str
     monto_total: float
+    impuestos: float
     moneda: str
     categoria: Optional[str]
     pdf_url: str

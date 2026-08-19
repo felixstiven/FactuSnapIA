@@ -35,7 +35,9 @@ class FacturaService:
         factura_data = self.ai_service.procesar_imagen_factura(pil_image)
 
         # 3. Guardar PDF en Supabase Storage
-        file_name = f"factura_{uuid.uuid4().hex[:8]}.pdf"
+        # Formatear el nombre como [Emisor]_[Fecha]_[Monto].pdf
+        safe_emisor = "".join(c for c in factura_data.emisor if c.isalnum() or c in " _-").strip().replace(" ", "_")
+        file_name = f"{safe_emisor}_{factura_data.fecha}_{factura_data.monto_total}USD.pdf"
         pdf_url = self.repository.subir_pdf_storage(pdf_bytes, file_name)
 
         # 4. Guardar registro en Supabase PostgreSQL

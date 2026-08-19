@@ -10,11 +10,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 export interface FacturaItem {
   id: string;
   emisor: string;
-  nit?: string;
+  nit: string | null;
   fecha: string;
   monto_total: number;
+  impuestos: number;
   moneda: string;
-  categoria?: string;
+  categoria: string | null;
   pdf_url: string;
   created_at?: string;
 }

@@ -23,33 +23,40 @@ except ImportError:
 class PDFService:
     @staticmethod
     def recortar_y_limpiar_fondo(pil_img: Image.Image) -> Image.Image:
-        """
-        Detecta la región de papel de la factura (zonas claras) y recorta el fondo (sillas, mesas, etc.).
-        Aplica un filtro de contraste y brillo para asegurar un fondo blanco limpio estilo escáner.
-        """
         img_rgb = pil_img.convert("RGB")
         try:
-            # 1. Convertir a grises
-            gray = img_rgb.convert("L")
-            # 2. Aislar los pixeles claros (el papel de la factura) con umbral 160
-            mask = gray.point(lambda p: 255 if p > 160 else 0)
-            # 3. Obtener el cuadro delimitador del papel blanco
-            bbox = mask.getbbox()
-            
-            if bbox:
-                x_min, y_min, x_max, y_max = bbox
-                w, h = img_rgb.size
+            if np is not None:
+                img_np = np.array(img_rgb)
+                # Convertir a grises
+                gray = np.mean(img_np, axis=2)
                 
-                # Añadir un pequeño margen de 15px para no cortar el texto
-                x_min = max(0, x_min - 15)
-                y_min = max(0, y_min - 15)
-                x_max = min(w, x_max + 15)
-                y_max = min(h, y_max + 15)
-
-                # Solo recortar si el area detectada es al menos el 20% de la imagen
-                # (evita recortes erróneos de brillos aislados)
-                if (x_max - x_min) > w * 0.2 and (y_max - y_min) > h * 0.2:
-                    img_rgb = img_rgb.crop((x_min, y_min, x_max, y_max))
+                # El recibo es muy blanco. Umbral estricto para ignorar fondos claros
+                mask = gray > 165
+                
+                # Contar pixeles blancos por fila y columna
+                row_counts = np.sum(mask, axis=1)
+                col_counts = np.sum(mask, axis=0)
+                
+                # Una fila/columna es recibo si tiene >15% de su longitud en blanco
+                h, w = gray.shape
+                row_mask = row_counts > (w * 0.15)
+                col_mask = col_counts > (h * 0.15)
+                
+                if np.any(row_mask) and np.any(col_mask):
+                    y_min = np.argmax(row_mask)
+                    y_max = len(row_mask) - np.argmax(row_mask[::-1])
+                    
+                    x_min = np.argmax(col_mask)
+                    x_max = len(col_mask) - np.argmax(col_mask[::-1])
+                    
+                    # Añadir margen
+                    x_min = max(0, x_min - 15)
+                    y_min = max(0, y_min - 15)
+                    x_max = min(w, x_max + 15)
+                    y_max = min(h, y_max + 15)
+                    
+                    if (x_max - x_min) > w * 0.2 and (y_max - y_min) > h * 0.2:
+                        img_rgb = img_rgb.crop((x_min, y_min, x_max, y_max))
         except Exception as e:
             print(f"Aviso al recortar imagen: {e}")
 
